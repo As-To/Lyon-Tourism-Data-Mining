@@ -1,5 +1,7 @@
 # Data_mining
 
+Partie 1 : Cleaning 
+
 1) délimiter la zone de lyon
 1) réfléchir à l'arborescence de fichiers  
 2) retirer les lignes avec des dates incohérentes 
@@ -11,3 +13,5 @@
 7) garder une trace du nombre de lignes supprimées par filtre 
 8) tester d'abord sur sample_data
 9) absence de tag et description (non prioritaire) 
+
+Partie 2 : Vizualisation 
