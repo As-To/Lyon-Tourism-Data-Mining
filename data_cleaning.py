@@ -1,70 +1,61 @@
-#2) retirer les lignes avec des dates incohérentes (année dans le futur > 2025)
-#3) retirer les lignes de bug (les lignes avec des colonnes en plus) 
 
 import pandas as pd
 
 
-data = pd.read_csv("flickr_data2.csv")
+# data = pd.read_csv("flickr_data2.csv")
+data = pd.read_csv("flickr_data2.csv", skipinitialspace=True)
+data.columns = data.columns.str.strip()
+# data = pd.read_csv("sample_data.csv") à décommenter pour tester avec un échantillon plus petit
+
+
+# version qui ne modifie pas le dataframe original
 def remove_inconsistent_dates(df):
     # Filter out rows where the year is greater than 2025
-    df = df[df[' date_taken_year'] <= 2025]
-    return df
+    return df[df['date_taken_year'] <= 2025].copy()
+    
+#version originale de Omar qui modifie directement le dataframe original
+# def remove_inconsistent_dates(df):
+#     # Filter out rows where the year is greater than 2025
+#     df = df[df['date_taken_year'] <= 2025]
+#     return df
 
 def save_cleaned_data(df, filename='cleaned_data.xlsx'):
     df.to_excel(filename, index=False)
 
+
+#version qui ne modifie pas le dataframe original
 def remove_buggy_rows(df):
     # Remove rows where the columns after the 16th are not NaN
     # Keep only the 16 first columns
-    df = df[df.iloc[:, 16:].isna().all(axis=1)]
-    df = df.iloc[:, :16]
-    return df
+    df_cleaned = df[df.iloc[:, 16:].isna().all(axis=1)]
+    df_cleaned = df_cleaned.iloc[:, :16]
+    return df_cleaned.copy()
 
+#version de Omar qui modifie directement le dataframe original
+# def remove_buggy_rows(df):
+#     # Remove rows where the columns after the 16th are not NaN
+#     # Keep only the 16 first columns
+#     df = df[df.iloc[:, 16:].isna().all(axis=1)]
+#     df = df.iloc[:, :16]
+#     return df
 
-data = pd.read_excel('flickr_data2.xlsx')
-before = len(data)
-data = remove_inconsistent_dates(data)
-data = remove_buggy_rows(data)
-after = len(data)
-print(f"Initial number of rows: {before}")
-print(f"Number of rows after cleaning: {after}")
-print(f"Removed {before - after} inconsistent or buggy rows.")
-print(data.head())
+# before = len(data)
+# data = remove_inconsistent_dates(data)
+# data = remove_buggy_rows(data)
+# after = len(data)
+# print(f"Initial number of rows: {before}")
+# print(f"Number of rows after cleaning: {after}")
+# print(f"Removed {before - after} inconsistent or buggy rows.")
+# print(data.head())
 #save_cleaned_data(data)
 
-
-def remove_inconsistent_dates(df):
-    # Filter out rows where the year is greater than 2025
-    df = df[df[' date_taken_year'] <= 2025]
-    return df
-
-def save_cleaned_data(df, filename='cleaned_data.xlsx'):
-    df.to_excel(filename, index=False)
-
-def remove_buggy_rows(df):
-    # Remove rows where the columns after the 16th are not NaN
-    # Keep only the 16 first columns
-    df = df[df.iloc[:, 16:].isna().all(axis=1)]
-    df = df.iloc[:, :16]
-    return df
-
-
-data = pd.read_excel('flickr_data2.xlsx')
-before = len(data)
-data = remove_inconsistent_dates(data)
-data = remove_buggy_rows(data)
-after = len(data)
-print(f"Initial number of rows: {before}")
-print(f"Number of rows after cleaning: {after}")
-print(f"Removed {before - after} inconsistent or buggy rows.")
-print(data.head())
-#save_cleaned_data(data)
-
-
-data = pd.read_csv("flickr_data2.csv")
+# création de la colonne 'date_key' pour regrouper les photos du même jour
 data['date_key'] = data['date_taken_year'].astype(str) + '-' + \
                     data['date_taken_month'].astype(str) + '-' + \
                     data['date_taken_day'].astype(str)
+
+
+
 
 # pour un point donné (lat, lon), retourne True si il est dans Lyon
 def is_within_lyon(lat: float, lon: float) -> bool:
@@ -83,6 +74,9 @@ def filter_lyon(data: pd.DataFrame) -> pd.DataFrame:
     return data.loc[mask].copy() # permet d'éviter de modifier l'original, en renvoyant une copie
     # mais on devra modifier directement data_lyon par la suite quand on voudra nettoyer les données pour de bon
 
+
+
+# filtre les photos prises au même endroit par le même utilisateur le même jour
 def filter_same_picture(df: pd.DataFrame) -> pd.DataFrame:
     print(f"Avant nettoyage. Lignes restantes : {len(df)}")
 
@@ -113,19 +107,47 @@ def filter_same_picture(df: pd.DataFrame) -> pd.DataFrame:
     df_cleaned = df[~is_duplicate].drop(columns=['diff_lat', 'diff_lon', 'same_user', 'same_day'])
 
     print(f"Nettoyage terminé. Lignes restantes : {len(df_cleaned)}")
+    print(f"Lignes supprimées : {len(df) - len(df_cleaned)}")
     return df_cleaned
 
 
 if __name__ == "__main__":
 
+# test des fonctions de nettoyage
+
+# 1) filtre Lyon : la zone définie est un rectangle 
+    print("1er filtre : Filtrage des données pour la zone de Lyon")
     before = len(data)
     data_lyon = filter_lyon(data)
     after = len(data_lyon)
 
-    cleaned = filter_same_picture(data)
-
     print(f"Lignes avant filtre Lyon : {before}")
     print(f"Lignes apres filtre Lyon : {after}")
-    print(data_lyon.sort_values(by=['user', 'date_key', 'lat', 'long']).head())
+    print(f"Nombre de lignes supprimées : {before - after}")
+    print(data_lyon.head())
+
+   
+# 2) filtre les duplicatas de photos : même utilisateur, même jour, même position (rayon) 
+    print("2ème filtre : Suppression des photos dupliquées")
+    cleaned = filter_same_picture(data)
+
+    # print(data_lyon.sort_values(by=['user', 'date_key', 'lat', 'long']).head())
     print(cleaned.head())
+
+ # 3) supprime les dates incohérentes : supérieur à 2025
+    print("3ème filtre : Suppression des dates incohérentes")
+    # cleaned = remove_inconsistent_dates(cleaned)
+    # print(cleaned.head())
+
+    data_cleaned_inconsistent = remove_inconsistent_dates(data)
+    # data = remove_buggy_rows(data)
+    after_cleaned_inconsistent = len(data_cleaned_inconsistent)
+    print(f"Initial number of rows before cleaning inconsistent: {before}")
+    print(f"Number of rows after cleaning inconsistent: {after_cleaned_inconsistent}")
+    print(f"Removed {before - after_cleaned_inconsistent} inconsistent rows.")
+    print(data_cleaned_inconsistent.head())
+
+#4) supprime les lignes buggées : colonnes après la 16ème non NaN
+    # print("4ème filtre : Suppression des lignes buggées")
+    
 
