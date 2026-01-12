@@ -32,6 +32,6 @@ def filter_same_picture(df: pd.DataFrame) -> pd.DataFrame:
     # On garde les données propres
     df_cleaned = df[~is_duplicate].drop(columns=['diff_lat', 'diff_lon', 'same_user', 'same_day'])
 
-    print(f"Nettoyage terminé. Lignes restantes : {len(df_cleaned)}")
-    print(f"Lignes supprimées : {len(df) - len(df_cleaned)}")
+    #print(f"Nettoyage terminé. Lignes restantes : {len(df_cleaned)}")
+    #print(f"Lignes supprimées : {len(df) - len(df_cleaned)}")
     return df_cleaned

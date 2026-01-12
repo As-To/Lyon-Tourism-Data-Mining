@@ -30,10 +30,13 @@ def drop_upload_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 #version qui ne modifie pas le dataframe original
 def remove_buggy_rows(df):
-    # Remove rows where the columns after the 16th are not NaN
-    # Keep only the 16 first columns
-    df_cleaned = df[df.iloc[:, 16:].isna().all(axis=1)]
-    df_cleaned = df_cleaned.iloc[:, :16]
+    # Remove rows where date_taken_minute > 59 or date_taken_hour > 23 or date_taken_day > 31 or date_taken_month > 12 or null values	
+    df_cleaned = df[
+		(df['date_taken_minute'].isna() | (df['date_taken_minute'] <= 59)) &
+		(df['date_taken_hour'].isna() | (df['date_taken_hour'] <= 23)) &
+		(df['date_taken_day'].isna() | (df['date_taken_day'] <= 31)) &
+		(df['date_taken_month'].isna() | (df['date_taken_month'] <= 12))
+	]		
     return df_cleaned.copy()
 
 #version de Omar qui modifie directement le dataframe original
