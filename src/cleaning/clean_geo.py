@@ -14,9 +14,13 @@ def is_within_lyon(lat: float, lon: float) -> bool:
 
 # filtre toutes les lignes du DataFrame pour ne garder que celles situées à Lyon
 def filter_lyon(data: pd.DataFrame) -> pd.DataFrame:
-    mask = data["lat"].between(45.6, 45.9) & data["long"].between(4.7, 5.0) 
+    mask = data["lat"].between(45.73, 45.79) & data["long"].between(4.81, 4.9)
     return data.loc[mask].copy() # permet d'éviter de modifier l'original, en renvoyant une copie
     # mais on devra modifier directement data_lyon par la suite quand on voudra nettoyer les données pour de bon
+
+
+# LAT_MIN, LAT_MAX = 45.73, 45.79
+# LON_MIN, LON_MAX = 4.81, 4.9
 
 # A ne pas supprimer avant que je vérifie (Asmae) : 
 # a priori : 45.7 et 45.8, 4.8 et 4.9 pour être plus restrictif

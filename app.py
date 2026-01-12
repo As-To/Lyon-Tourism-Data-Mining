@@ -3,24 +3,21 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
-from data_cleaning import filter_lyon, filter_same_picture
+from src.cleaning.clean_geo import filter_lyon
+from src.cleaning.clean_duplicates import filter_same_picture
 
 # 1. Configuration de la page
 st.set_page_config(page_title="Projet Lyon - Visualisation", layout="wide")
 st.title(" Analyse des zones d'intérêt à Lyon")
-
+ 
 # 2. Chargement des données (Cache pour éviter de recharger à chaque clic)
 @st.cache_data
 def load_data():
-    df = pd.read_csv("sample_data.csv")
+    df = pd.read_csv("data/sample/sample_data.csv")
     
     # SUPPRIME LES ESPACES INUTILES DANS LES NOMS DE COLONNES
     df.columns = df.columns.str.strip()
-    
-    # Vérifie si c'est 'lat' ou 'latitude' et harmonise
-    if 'lat' in df.columns:
-        df = df.rename(columns={'lat': 'latitude', 'long': 'longitude', 'user': 'user'})
-    
+   
     return df
 
 try:
@@ -31,8 +28,11 @@ except FileNotFoundError:
 
 # 3. Définition de la Zone (Le Rectangle Rouge)
 # Coordonnées [Min, Max]
-LAT_MIN, LAT_MAX = 45.65, 45.85
-LON_MIN, LON_MAX = 4.7, 5.0
+# LAT_MIN, LAT_MAX = 45.65, 45.85
+# LON_MIN, LON_MAX = 4.7, 5.0
+
+LAT_MIN, LAT_MAX = 45.73, 45.79
+LON_MIN, LON_MAX = 4.81, 4.9
 
 # 4. Interface Latérale (Boutons et Filtres)
 st.sidebar.header("Options de Filtrage")
@@ -89,7 +89,7 @@ if not data_to_display.empty:
     mc = MarkerCluster()
     for idx, row in subset.iterrows():
         folium.Marker(
-            location=[row['latitude'], row['longitude']],
+            location=[row['lat'], row['long']],
             popup=f"User: {row['user']}",
         ).add_to(mc)
     mc.add_to(m)

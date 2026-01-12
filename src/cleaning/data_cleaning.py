@@ -128,3 +128,36 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# à décommenter quand la fonction de Omar marchera correctement
+# def apply_all_filters(df: pd.DataFrame, apply_buggy: bool = False) -> pd.DataFrame:
+#     """Apply all cleaning filters in a stable order and return cleaned DataFrame.
+
+#     Order applied:
+#     1. filter_lyon
+#     2. filter_same_picture
+#     3. remove_inconsistent_dates
+#     4. (optional) remove_buggy_rows if apply_buggy is True
+#     5. drop_upload_columns
+#     """
+#     # work on a copy to avoid side-effects
+#     cleaned = df.copy()
+
+#     # 1) zone filter
+#     cleaned = filter_lyon(cleaned)
+
+#     # 2) duplicate removal
+#     cleaned = filter_same_picture(cleaned)
+
+#     # 3) remove inconsistent dates
+#     cleaned = remove_inconsistent_dates(cleaned)
+
+#     # 4) optional buggy rows removal
+#     if apply_buggy:
+#         cleaned = remove_buggy_rows(cleaned)
+
+#     # 5) drop upload date columns
+#     cleaned = drop_upload_columns(cleaned)
+
+#     return cleaned
