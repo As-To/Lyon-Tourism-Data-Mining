@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from clean_geo import filter_lyon
 from clean_dates import remove_inconsistent_dates, drop_upload_columns, remove_buggy_rows
 from clean_duplicates import filter_same_picture
-from utils import save_cleaned_data
+from utils import save_cleaned_data, save_cleaned_data_csv
 
 
 data = pd.read_csv("data/raw/flickr_data2.csv", skipinitialspace=True)
@@ -167,7 +167,8 @@ def main():
     print(f"Lignes après nettoyage complet des données de Lyon: {after_lyon}")
     print(f"Nombre de lignes supprimées : {before_lyon - after_lyon}")
     # sauvegarde des données nettoyées : une fois que tous nos filtres seront validés 
-    save_cleaned_data(data_lyon_cleaned, filename='cleaned_lyon_data.xlsx')
+    #save_cleaned_data(data_lyon_cleaned, filename='cleaned_lyon_data.xlsx')
+    save_cleaned_data_csv(data_lyon_cleaned, filename='cleaned_lyon_data.csv')
 
 
 if __name__ == '__main__':
