@@ -1,6 +1,7 @@
 import pandas as pd
 from pyproj import Transformer
 import numpy as np
+import os
 from sklearn.cluster import DBSCAN, KMeans
 import matplotlib.pyplot as plt
 
@@ -60,8 +61,12 @@ def compute_dbscan_with_kmeans_split(df, eps=100, min_samples=80, max_cluster_si
 
     return df_out, X, Y, labels
 
-#1ERE ETAPE : CHARGEMENT ET NETTOYAGE DES DONNEES
-df = pd.read_csv("../../data/cleaned/cleaned_lyon_data.csv")
+# Trouve le chemin du dossier actuel du script
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# Construit le chemin vers le fichier CSV
+file_path = os.path.join(current_dir, "../../data/cleaned/cleaned_lyon_data.csv")
+
+df = pd.read_csv(file_path)
 
 # Appel de la fonction (calcule X, Y, labels + ajoute cluster)
 df, X, Y, labels = compute_dbscan_with_kmeans_split(df, eps=100, min_samples=80, max_cluster_size=5000) 
