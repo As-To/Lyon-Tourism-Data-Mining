@@ -17,7 +17,8 @@ data.columns = data.columns.str.strip() # enlève les espaces dans les noms de c
 def exploratory_analysis(df: pd.DataFrame) -> None:
 
     # affichage des informations générales et de statistiques descriptives pour comprendre la structure des données
-    print(data.info())
+    # use the passed dataframe (do not rely on module-level `data`)
+    print(df.info())
 
     # bornes lat/long
     lat_min, lat_max = data["lat"].min(), data["lat"].max()
@@ -42,6 +43,11 @@ def exploratory_analysis(df: pd.DataFrame) -> None:
     print(f"Années min/max : {year_min} / {year_max}")
     print(photos_par_annee)
     print(photos_par_upload_annee)
+
+    # Nombre de valeurs nulles par colonne
+    null_counts = df.isna().sum()
+    print("Nombre de valeurs nulles par colonne :")
+    print(null_counts)
 
     # histogramme du nombre de photos par année
     plt.figure(figsize=(10, 4))
@@ -167,7 +173,7 @@ def main():
     print(f"Lignes après nettoyage complet des données de Lyon: {after_lyon}")
     print(f"Nombre de lignes supprimées : {before_lyon - after_lyon}")
     # sauvegarde des données nettoyées : une fois que tous nos filtres seront validés 
-    save_cleaned_data(data_lyon_cleaned, filename='cleaned_lyon_data.xlsx')
+    # save_cleaned_data(data_lyon_cleaned, filename='cleaned_lyon_data.xlsx')
 
 
 if __name__ == '__main__':

@@ -16,6 +16,7 @@ def is_within_lyon(lat: float, lon: float) -> bool:
 def filter_lyon(data: pd.DataFrame) -> pd.DataFrame:
     mask = data["lat"].between(45.73, 45.79) & data["long"].between(4.81, 4.9)
     return data.loc[mask].copy() # permet d'éviter de modifier l'original, en renvoyant une copie
+    # on renvoie toutes les lignes pour lesquelles mask vaut true
     # mais on devra modifier directement data_lyon par la suite quand on voudra nettoyer les données pour de bon
 
 
