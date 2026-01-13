@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 df = pd.read_csv("../../data/cleaned/cleaned_lyon_data.csv")
 
 # On ne garde que les colonnes utiles pour le clustering spatial
-df = df[['lat', 'long']]
+df = df[['lat', 'long', 'tags', 'title']]
 
 # Suppression des lignes avec coordonnées manquantes
 df = df.dropna()
@@ -36,7 +36,7 @@ points = np.column_stack((X, Y))
 #3EME ETAPE : CLUSTERING SPATIAL AVEC DBSCAN
 dbscan = DBSCAN(
     eps=100,        # rayon de 100 mètres
-    min_samples=80 # minimum 80 photos pour former une zone
+    min_samples=100 # minimum 100 photos pour former une zone
 )
 
 labels = dbscan.fit_predict(points)
