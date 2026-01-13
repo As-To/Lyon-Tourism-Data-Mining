@@ -3,7 +3,7 @@ from pyproj import Transformer
 import numpy as np
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
-
+#Test function to encapsulate the DBSCAN processing
 
 def compute_dbscan_xy_labels(df, eps=100, min_samples=100):
     """
