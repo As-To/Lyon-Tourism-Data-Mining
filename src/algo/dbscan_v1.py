@@ -47,7 +47,7 @@ def compute_dbscan_xy_labels(df, eps=100, min_samples=100):
 # =========================
 
 #1ERE ETAPE : CHARGEMENT ET NETTOYAGE DES DONNEES
-df = pd.read_csv("../../data/cleaned/cleaned_lyon_data.csv")
+df = pd.read_csv("data/cleaned/cleaned_lyon_data.csv")
 
 # Appel de la fonction (calcule X, Y, labels + ajoute cluster)
 df, X, Y, labels = compute_dbscan_xy_labels(df, eps=100, min_samples=100)
