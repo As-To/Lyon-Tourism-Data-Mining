@@ -5,6 +5,7 @@ from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
 from src.cleaning.clean_geo import filter_lyon
 from src.cleaning.clean_duplicates import filter_same_picture
+from src.algo.K_means import run_kmeans
 
 # 1. Configuration de la page
 st.set_page_config(page_title="Projet Lyon - Visualisation", layout="wide")
@@ -36,6 +37,14 @@ LON_MIN, LON_MAX = 4.81, 4.9
 
 # 4. Interface Latérale (Boutons et Filtres)
 st.sidebar.header("Options de Filtrage")
+
+def get_color(cluster_id):
+    if cluster_id == -1: return 'black' # Bruit (DBSCAN)
+    colors_list = ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 
+                   'lightred', 'beige', 'darkblue', 'darkgreen', 'cadetblue', 
+                   'darkpurple', 'white', 'pink', 'lightblue', 'lightgreen', 
+                   'gray', 'black', 'lightgray']
+    return colors_list[cluster_id % len(colors_list)]
 
 # Option A : Choisir quel jeu de données afficher
 filter_mode = st.sidebar.radio(
