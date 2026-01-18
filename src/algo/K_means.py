@@ -1,9 +1,11 @@
-import os
+import os,sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 import pandas as pd
 from pyproj import Transformer
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+from src.algo.text_mining import top_terms_by_cluster, DEFAULT_STOPWORDS
 
 # Trouve le chemin du dossier actuel du script
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -93,6 +95,14 @@ plt.xlabel("X (m)")
 plt.ylabel("Y (m)")
 plt.show()
 
+# Analyse des mots les plus fréquents par cluster via text_mining
+
+print(f"Nombre de clusters : {n_clusters}")
+
+topics = top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=DEFAULT_STOPWORDS, use_lemmas=True)
+print("Mots représentatifs par cluster :")
+for cl, terms in topics.items():
+    print(f"Cluster {cl}: {', '.join(terms)}")
 
 
 

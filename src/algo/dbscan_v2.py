@@ -1,9 +1,11 @@
 import pandas as pd
 from pyproj import Transformer
 import numpy as np
-import os
+import os,sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from sklearn.cluster import DBSCAN, KMeans
 import matplotlib.pyplot as plt
+from src.algo.text_mining import top_terms_by_cluster, DEFAULT_STOPWORDS
 
 def compute_dbscan_with_kmeans_split(df, eps=100, min_samples=80, max_cluster_size=5000):
     """
@@ -15,7 +17,7 @@ def compute_dbscan_with_kmeans_split(df, eps=100, min_samples=80, max_cluster_si
     """
 
     # Ne pas changer le reste : on garde exactement la même logique de nettoyage
-    df_out = df[['lat', 'long']].dropna().copy()
+    df_out = df[['lat', 'long', 'tags', 'title']].dropna(subset=['lat', 'long']).copy()
 
     # Projection WGS84 (GPS) → Lambert-93 (mètres, France)
     transformer = Transformer.from_crs(
@@ -107,3 +109,13 @@ plt.title("DBSCAN – zone centrale")
 plt.xlabel("X (m)")
 plt.ylabel("Y (m)")
 plt.show()    
+
+# Analyse des mots les plus fréquents par cluster via text_mining
+
+print(f"Nombre de clusters : {n_clusters}")
+print(f"Proportion de bruit : {noise_ratio:.2%}")
+
+topics = top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=DEFAULT_STOPWORDS, use_lemmas=True)
+print("Mots représentatifs par cluster :")
+for cl, terms in topics.items():
+    print(f"Cluster {cl}: {', '.join(terms)}")
