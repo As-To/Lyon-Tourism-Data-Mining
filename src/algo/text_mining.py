@@ -59,7 +59,24 @@ FRENCH_STOPWORDS = {
     "plus","pour","qu","que","qui","sa","se","ses","si","son","sont","sous","sur","ta","te",
     "tes","toi","ton","tous","tout","tres","tu","un","une","vos","votre","vous","y"
 }
-EXTRA_STOPWORDS = {"photo", "image", "tag", "titre", "title"}
+# EXTRA_STOPWORDS = {"photo", "image", "tag", "titre", "title"}
+
+EXTRA_STOPWORDS = {
+    "photo", "image", "tag", "titre", "title",
+
+    # platform / mobile
+    "uploaded", "upload", "flickrmobile", "flickriosapp",
+    "instagram", "instagramapp", "iphoneography", "squareformat",
+    "square", "filter", "nofilter", "iphone",
+
+    # file / camera artefacts
+    "img", "img_", "dsc", "jpg", "jpeg", "png",
+
+    # short / noisy tokens often not semantic
+    "fr", "incity", "lyon", "france", "europe", "city", "ville", "street", "urban", "urbain",
+    "day"
+}
+
 DEFAULT_STOPWORDS = set(ENGLISH_STOP_WORDS) | FRENCH_STOPWORDS | EXTRA_STOPWORDS
 
 def build_text(df):
@@ -73,10 +90,12 @@ def build_text(df):
 
 def basic_preprocess(s: str) -> str:
     s = s.lower()
+    # supprime les tokens techniques type img_1234, dsc_5678
+    s = re.sub(r"\b(img|dsc)\w+\b", " ", s)
     s = re.sub(r"\d+", " ", s)
     # s = re.sub(r"[^\w\s\u0600-\u06FF]", " ", s)  # garde lettres/chiffres + arabe
     s= re.sub(r"[^\w\s]", " ", s)
-
+    
     s = re.sub(r"\s+", " ", s).strip()
     return s
 
@@ -94,6 +113,23 @@ def lemmatize_optional(text: str):
         return " ".join([t.lemma_ if t.lemma_ != "-PRON-" else t.text for t in doc])
     except Exception:
         return text
+
+# fonction qui supprime les unigrams redondants avec des bigrams : 
+# par exemple si "rhone" et "rhone alpes" sont tous les deux dans la liste, on supprime "rhone"
+def remove_redundant_unigrams(terms):
+    bigrams = {t for t in terms if " " in t}
+    unigrams = set(terms)
+
+    to_remove = set()
+    for bg in bigrams:
+        w1, w2 = bg.split()
+        if w1 in unigrams:
+            to_remove.add(w1)
+        if w2 in unigrams:
+            to_remove.add(w2)
+
+    return [t for t in terms if t not in to_remove]
+
 
 def top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=None, use_lemmas=True, drop_noise=True):
     if stopwords is None:
@@ -127,6 +163,13 @@ def top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=None, us
             continue
         mean_tfidf = X[idx].mean(axis=0).A1
         top_idx = mean_tfidf.argsort()[::-1][:top_k]
-        results[cl] = list(terms[top_idx])
+        
+        # results[cl] = list(terms[top_idx]) à décommenter pour verison qui supprime pas les unigrams redondants
+        
+        # à commenter pour version qui supprime les unigrams redondants
+        cluster_terms = list(terms[top_idx])
+        cluster_terms = remove_redundant_unigrams(cluster_terms)
+        results[cl] = cluster_terms
+
 
     return results
