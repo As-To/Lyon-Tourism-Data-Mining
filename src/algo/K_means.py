@@ -40,7 +40,6 @@ def run_kmeans(points, k, df):
     return df
 
 
-# === NOUVELLE FONCTION REUTILISABLE (sans effet de bord) ===
 def compute_kmeans_clustering(df, k=25):
     points, X, Y, df2 = transform_geo(df)
     df2 = run_kmeans(points, k, df2)
