@@ -4,6 +4,7 @@ import numpy as np
 import os
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
+from sklearn.neighbors import NearestNeighbors
 
 def compute_dbscan_xy_labels(df, eps=100, min_samples=100):
     """
@@ -31,6 +32,7 @@ def compute_dbscan_xy_labels(df, eps=100, min_samples=100):
     )
 
     points = np.column_stack((X, Y))
+    plot_k_distance(points, k=min_samples)
 
     # DBSCAN
     dbscan = DBSCAN(eps=eps, min_samples=min_samples)
@@ -40,6 +42,24 @@ def compute_dbscan_xy_labels(df, eps=100, min_samples=100):
     df_out['cluster'] = labels
 
     return df_out, X, Y, labels
+
+def plot_k_distance(points, k=4):
+    """
+    Affiche le graphe des distances au k-ième plus proche voisin
+    pour aider à choisir le paramètre eps de DBSCAN.
+    """
+    neigh = NearestNeighbors(n_neighbors=k)
+    nbrs = neigh.fit(points)
+    distances, indices = nbrs.kneighbors(points)
+    k_distances = np.sort(distances[:, k-1])
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(k_distances)
+    plt.title(f"Graphique des distances au {k}ème plus proche voisin")
+    plt.xlabel("Points triés par distance")
+    plt.ylabel(f"Distance au {k}ème plus proche voisin")
+    plt.grid()
+    plt.show()
 
 
 #1ERE ETAPE : CHARGEMENT ET NETTOYAGE DES DONNEES
@@ -69,7 +89,8 @@ print(f"Proportion de bruit : {noise_ratio:.2%}")
 unique, counts = np.unique(labels, return_counts=True)
 print("Nombre de points par cluster (label : nombre de points) :")
 for label, count in zip(unique, counts):
-    print(f"{label} : {count}")
+    cluster_proportion = count / len(labels) * 100
+    print(f"{label} : {cluster_proportion:.2f}% ({count} points)")
 
 #5EME ETAPE : VISUALISATION DES CLUSTERS
 # Paramètre d'affichage

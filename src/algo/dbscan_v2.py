@@ -71,7 +71,7 @@ file_path = os.path.join(current_dir, "../../data/cleaned/cleaned_lyon_data.csv"
 df = pd.read_csv(file_path)
 
 # Appel de la fonction (calcule X, Y, labels + ajoute cluster)
-df, X, Y, labels = compute_dbscan_with_kmeans_split(df, eps=100, min_samples=80, max_cluster_size=5000) 
+df, X, Y, labels = compute_dbscan_with_kmeans_split(df, eps=100, min_samples=100, max_cluster_size=5000) 
 
 
 #5EME ETAPE : AFFICHAGE DES RESULTATS
