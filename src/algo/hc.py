@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from pyproj import Transformer
 import numpy as np
 from sklearn.cluster import KMeans
@@ -29,7 +30,7 @@ def divisional_clustering(df, max_size=5000, random_state=42):
             continue
 
         # Division en 2
-        kmeans = KMeans(n_clusters=2, random_state=random_state, n_init="auto")
+        kmeans = KMeans(n_clusters=2, random_state=random_state, n_init=10)
         labels = kmeans.fit_predict(cluster_points)
 
         idx_0 = idx[labels == 0]
@@ -53,7 +54,7 @@ def compute_hc_clustering(df, max_size=5000, random_state=42):
     """
 
     # Étape 1 : Nettoyage
-    df_out = df[['lat', 'long']].dropna().copy()
+    df_out = df[['lat', 'long', 'tags', 'title']].dropna(subset=['lat', 'long']).copy()
 
     # Étape 2 : Transformation des coordonnées GEO en coordonnées planes
     # Projection WGS84 (GPS) → Lambert-93 (mètres, France)
@@ -72,52 +73,23 @@ def compute_hc_clustering(df, max_size=5000, random_state=42):
     # Étape 3 : Clustering spatial avec Hierarchical Clustering (Divisible)
     df_out["X"] = X
     df_out["Y"] = Y
-    df_out = divisional_clustering(df_out[["X", "Y"]], max_size=max_size, random_state=random_state)
+    df_out = divisional_clustering(df_out, max_size=max_size, random_state=random_state)
 
     return df_out, X, Y
 
 
-#1ERE ETAPE : CHARGEMENT ET NETTOYAGE DES DONNEES
-df = pd.read_csv("../../data/cleaned/cleaned_lyon_data.csv")
 
-# Appel de la fonction (calcule X, Y, labels + ajoute cluster)
-df_result, X, Y = compute_hc_clustering(df, max_size=5000)
+if __name__ == "__main__":
+    # TOUT ce code ne s'exécutera QUE si tu lances 'python hc.py' 
+    # Il sera IGNORÉ quand Streamlit importera le fichier.
+    
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_dir, "../../data/cleaned/cleaned_lyon_data.csv")
+    df = pd.read_csv(file_path)
 
-#4EME ETAPE : ANALYSE DES RESULTATS
-df_result['cluster'].value_counts()
+    df_result, X, Y = compute_hc_clustering(df, max_size=5000)
 
-#5EME ETAPE : AFFICHAGE DES RESULTATS
-n_clusters = len(set(df_result['cluster'])) - (1 if -1 in df_result['cluster'] else 0)
-noise_ratio = (df_result['cluster'] == -1).mean()
-
-print(f"Nombre de clusters : {n_clusters}")
-print(f"Proportion de bruit : {noise_ratio:.2%}")
-
-#Nombre de points par cluster
-unique, counts = np.unique(df_result['cluster'], return_counts=True)
-print("Nombre de points par cluster (label : nombre de points) :")
-for label, count in zip(unique, counts):
-    print(f"{label} : {count}")
-
-
-#5EME ETAPE : VISUALISATION DES CLUSTERS
-# Paramètre d'affichage
-SHOW_NOISE = False  # True = afficher le bruit, False = le masquer
-
-# Masque des points à afficher
-mask = np.ones_like(df_result['cluster'], dtype=bool) if SHOW_NOISE else (df_result['cluster'] != -1)
-
-
-xmin, xmax = np.percentile(X, [5, 95])
-ymin, ymax = np.percentile(Y, [5, 80])
-
-plt.figure(figsize=(6, 6))
-plt.scatter(X[mask], Y[mask], c=df_result['cluster'][mask], s=5, cmap='tab20')
-
-#plt.xlim(xmin, xmax)
-#plt.ylim(ymin, ymax)
-
-plt.title("Hierarchical clustering – zone centrale")
-plt.xlabel("X (m)")
-plt.ylabel("Y (m)")
-plt.show()    
+    # Tes affichages de test
+    print(f"Nombre de clusters : {len(df_result['cluster'].unique())}")
+    plt.scatter(X, Y, c=df_result['cluster'], s=5)
+    plt.show()
