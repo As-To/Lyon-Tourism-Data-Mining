@@ -4,8 +4,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pandas as pd
 import numpy as np
-from sklearn.cluster import DBSCAN
 from src.algo.text_mining import top_terms_by_cluster
+from src.algo.dbscan_v1 import compute_dbscan_xy_labels
 
 
 def main():
@@ -19,25 +19,16 @@ def main():
         if c not in df.columns:
             df[c] = ""
 
-    # keep rows with valid lat,long
-    df = df.dropna(subset=["lat", "long"])[:5000]  # limit for speed
-    df["lat"] = df["lat"].astype(float)
-    df["long"] = df["long"].astype(float)
+    # Use the project's DBSCAN wrapper which projects coordinates
+    # compute_dbscan_xy_labels returns (df_out, X, Y, labels)
+    # eps is in meters (Lambert-93 projection) and min_samples as usual
+    try:
+        df_out, X, Y, labels = compute_dbscan_xy_labels(df, eps=100, min_samples=5)
+    except Exception as e:
+        print(f"DBSCAN preprocessing failed: {e}")
+        return
 
-    # convert to radians for haversine metric
-    coords = np.radians(df[["lat", "long"]].values)
-
-    # DBSCAN with haversine metric; eps is in radians
-    # eps ~ 0.001 rad ≈ 6.37 km; adjust if needed
-    db = DBSCAN(eps=0.001, min_samples=5, metric='haversine')
-    labels = db.fit_predict(coords)
-
-    df["cluster"] = labels
-
-    # filter out noise if you want: keep clusters >=0
-    # df = df[df['cluster'] >= 0]
-
-    results = top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=None)
+    results = top_terms_by_cluster(df_out, cluster_col="cluster", top_k=10, stopwords=None)
 
     print("Top terms by cluster (DBSCAN sample):")
     for cl, terms in sorted(results.items()):
