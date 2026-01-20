@@ -54,49 +54,56 @@ def main():
     file_path = os.path.join(current_dir, "../../data/cleaned/cleaned_lyon_data.csv")
 
     df = pd.read_csv(file_path)
+    
 
-    '''
-    # Plage de k à tester (ex: de 2 à 20 zones)
-    K_range = range(2, 20)
-    inertias = []
-
-    print("Calcul de l'inertie pour différents k en cours...")
-
-    for k in K_range:
-        # On entraine le modèle pour chaque k
-        kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
-        kmeans.fit(points)
-        # On stocke l'inertie (la somme des distances carrées intra-cluster)
-        inertias.append(kmeans.inertia_)
-
-    # Affichage du graphique "Coude"
-    plt.figure(figsize=(10, 6))
-    plt.plot(K_range, inertias, 'bo-')
-    plt.xlabel('Nombre de clusters (k)')
-    plt.ylabel('Inertie')
-    plt.title('Méthode du Coude pour déterminer le nombre optimal de zones')
-    plt.xticks(K_range)
-    plt.grid(True)
-    plt.show()
-    '''
-
-    # Avec la méthode du coude, on aurait dit que k=5 est un bon choix, cependant 5 endroits à visiter à Lyon est trop peu.
-    # Donc d'apres ce que l'on a vu avec DBSCAN, On va choisir K=25.
     points, X, Y, df = transform_geo(df)
-
-    k_optimal = 25
+    k_optimal = 200
     df = run_kmeans(points, k_optimal, df)
-    df['cluster'].value_counts()
 
-    # AFFICHAGE DES RESULTATS
-    n_clusters = len(set(df['cluster'])) - (1 if -1 in df['cluster'] else 0)
-    print(f"Nombre de clusters : {n_clusters}")
+    # --- ÉTAPE DE FILTRAGE ---
+    MIN_SIZE = 75
+    
+    # 1. Calculer la taille de CHAQUE cluster
+    counts = df['cluster'].value_counts()
+    
+    # 2. Identifier les IDs des clusters qui respectent la condition
+    valid_clusters_ids = counts[counts >= MIN_SIZE].index
+    
+    # 3. Créer le masque pour filtrer le DataFrame et les coordonnées X, Y
+    mask = df['cluster'].isin(valid_clusters_ids)
+    
+    # 4. Appliquer le filtre (très important pour que X, Y et df gardent la même taille)
+    df_filtered = df[mask].copy()
+    X_filtered = X[mask]
+    Y_filtered = Y[mask]
 
-    # VISUALISATION DES CLUSTERS
+    # --- AFFICHAGE DE LA RÉPARTITION ---
+    # On récupère les comptes uniquement pour les clusters valides
+    final_counts = df_filtered['cluster'].value_counts().sort_index()
+    
+    print("-" * 30)
+    print(f"Répartition des points sur les {len(final_counts)} clusters valides (>= {MIN_SIZE} pts) :")
+    for cluster_id, count in final_counts.items():
+        print(f"Cluster {cluster_id} : {count} points")
+    print("-" * 30)
+
+    # --- ANALYSE ET VISUALISATION ---
+    n_clusters = len(final_counts)
+    print(f"Nombre de clusters restants : {n_clusters}")
+
+    # Utiliser le dataframe filtré pour le text mining
+    topics = top_terms_by_cluster(df_filtered, cluster_col="cluster", top_k=10,
+                                 stopwords=DEFAULT_STOPWORDS, use_lemmas=True)
+    print("Mots représentatifs par cluster :")
+    for cl, terms in topics.items():
+        main_term = terms[0].upper() 
+        print(f"Cluster {cl} : {main_term}")
+    
+    # Utiliser les coordonnées filtrées pour le scatter plot
     xmin, xmax = np.percentile(X, [0, 100])
     ymin, ymax = np.percentile(Y, [0, 100])
     plt.figure(figsize=(7, 7))
-    plt.scatter(X, Y, c=df['cluster'], s=5, cmap='tab20')
+    plt.scatter(X_filtered, Y_filtered, c=df_filtered['cluster'], s=5, cmap='tab20')
     plt.xlim(xmin, xmax)
     plt.ylim(ymin, ymax)
     plt.title("K-Means – zone centrale")
@@ -104,14 +111,10 @@ def main():
     plt.ylabel("Y (m)")
     plt.show()
 
-    # Analyse des mots les plus fréquents par cluster via text_mining
-    print(f"Nombre de clusters : {n_clusters}")
 
-    topics = top_terms_by_cluster(df, cluster_col="cluster", top_k=10,
-                                 stopwords=DEFAULT_STOPWORDS, use_lemmas=True)
-    print("Mots représentatifs par cluster :")
-    for cl, terms in topics.items():
-        print(f"Cluster {cl}: {', '.join(terms)}")
+    
+
+    
 
 
 if __name__ == "__main__":
