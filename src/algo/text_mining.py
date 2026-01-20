@@ -46,39 +46,63 @@
 # sachant que j'ai une colonne "cluster" dans mon dataframe
 # j'utilise TF-IDF pour ça
 
+
+# la bonne version est celle la : 
+
+
 import re
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer, ENGLISH_STOP_WORDS
+import nltk
+from nltk.corpus import stopwords
+nltk.download('stopwords')
 
-# Stopwords FR/EN manuels pour éviter les mots outils
-FRENCH_STOPWORDS = {
-    "alors","au","aucun","aussi","autre","avant","avec","car","ce","cela","ces","cet","cette",
-    "ceux","chaque","comme","comment","dans","de","des","du","donc","elle","elles","en","encore",
-    "est","et","eu","fait","hormis","il","ils","je","jusqu","la","le","les","leur","leurs",
-    "lui","ma","mais","mes","moi","mon","ne","nos","notre","nous","on","ou","par","pas","peu",
-    "plus","pour","qu","que","qui","sa","se","ses","si","son","sont","sous","sur","ta","te",
-    "tes","toi","ton","tous","tout","tres","tu","un","une","vos","votre","vous","y"
-}
+
+###
+
+
+# FRENCH_STOPWORDS = {
+#     "alors","au","aucun","aussi","autre","avant","avec","car","ce","cela","ces","cet","cette",
+#     "ceux","chaque","comme","comment","dans","de","des","du","donc","elle","elles","en","encore",
+#     "est","et","eu","fait","hormis","il","ils","je","jusqu","la","le","les","leur","leurs",
+#     "lui","ma","mais","mes","moi","mon","ne","nos","notre","nous","on","ou","par","pas","peu",
+#     "plus","pour","qu","que","qui","sa","se","ses","si","son","sont","sous","sur","ta","te",
+#     "tes","toi","ton","tous","tout","tres","tu","un","une","vos","votre","vous","y"
+# }
 # EXTRA_STOPWORDS = {"photo", "image", "tag", "titre", "title"}
+
+FRENCH_STOPWORDS = set(stopwords.words("french"))
 
 EXTRA_STOPWORDS = {
     "photo", "image", "tag", "titre", "title",
 
-    # platform / mobile
+    
     "uploaded", "upload", "flickrmobile", "flickriosapp",
     "instagram", "instagramapp", "iphoneography", "squareformat",
     "square", "filter", "nofilter", "iphone",
 
-    # file / camera artefacts
+   
     "img", "img_", "dsc", "jpg", "jpeg", "png",
 
-    # short / noisy tokens often not semantic
+    # mots que l'on juge peu informatifs dans notre contexte : rhone ça se discute
+    "lyoncity", "lyonnais",
     "fr", "incity", "lyon", "france", "europe", "city", "ville", "street", "urban", "urbain",
-    "day"
+    "day","europe", "europa",
+
+    # après la visualisation des wordclouds
+    "paper", "pasted", "pasteup", "wheatpaste", "wheatpaper",
+    "collage",
+    "nikon", "canon", "dsc",
+    "streetart", 
+
+    #artefact de plateforme
+    "foursquare", "venue", "foursquare venue", "xproii", "proii", "vscocam", "vsco", "rhone", "rhonealpes", "moto", "bb", "sncf"
+
 }
 
 DEFAULT_STOPWORDS = set(ENGLISH_STOP_WORDS) | FRENCH_STOPWORDS | EXTRA_STOPWORDS
 
+# on commence par construire le texte combiné "tags + title"
 def build_text(df):
     # s’assure que les colonnes existent
     for col in ("tags", "title"):
@@ -88,15 +112,16 @@ def build_text(df):
     title = df["title"].fillna("")
     return (tags + " " + title).str.strip()
 
+# on fait un pré-traitement basique du texte 
 def basic_preprocess(s: str) -> str:
-    s = s.lower()
+    s = s.lower() # met en minuscules
     # supprime les tokens techniques type img_1234, dsc_5678
-    s = re.sub(r"\b(img|dsc)\w+\b", " ", s)
-    s = re.sub(r"\d+", " ", s)
-    # s = re.sub(r"[^\w\s\u0600-\u06FF]", " ", s)  # garde lettres/chiffres + arabe
-    s= re.sub(r"[^\w\s]", " ", s)
+    s = re.sub(r"\b(img|dsc)\w+\b", " ", s) # supprime les mots commençant par img ou dsc
+    s = re.sub(r"\d+", " ", s) # supprime les chiffres et remplace par un espace
     
-    s = re.sub(r"\s+", " ", s).strip()
+    s= re.sub(r"[^\w\s]", " ", s) # enlève les caractères spéciaux et remplace par un espace
+    
+    s = re.sub(r"\s+", " ", s).strip()# remplace les espaces multiples par un seul espace
     return s
 
 def lemmatize_optional(text: str):
@@ -136,27 +161,33 @@ def top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=None, us
         stopwords = DEFAULT_STOPWORDS
 
     # normalise pour scikit-learn
-    if isinstance(stopwords, set):
+    if isinstance(stopwords, set): 
         stopwords = sorted(stopwords)
 
     work = df.copy()
-    if drop_noise and cluster_col in work.columns:
+    if drop_noise and cluster_col in work.columns: # si on veut supprimer le bruit (-1)
         work = work[work[cluster_col] != -1]
 
-    texts = build_text(work).map(basic_preprocess)
+    texts = build_text(work).map(basic_preprocess) # construit le texte combiné et nettoyé
     if use_lemmas:
         texts = texts.map(lemmatize_optional)
 
+    # crée la matrice TF-IDF
+    # la matrice est de taille (n_samples, n_terms)
+    # TfidVectorizer tokenize les "documents", c'est à dire chaque image
     vectorizer = TfidfVectorizer(
         stop_words=stopwords,
+        strip_accents="unicode",
         min_df=3,
         max_df=0.85,
         ngram_range=(1, 2)
     )
+    # vectorise les textes en TF-IDF ce qui permet de pondérer les termes
     X = vectorizer.fit_transform(texts)
     terms = np.array(vectorizer.get_feature_names_out())
 
     results = {}
+    # pour chaque cluster, calcule les termes les plus représentatifs
     for cl in sorted(work[cluster_col].unique()):
         idx = np.where(work[cluster_col].values == cl)[0]
         if len(idx) == 0:

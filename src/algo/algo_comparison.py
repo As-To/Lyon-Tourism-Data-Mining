@@ -42,7 +42,7 @@ def main():
 
     plot_one(axes[0, 0], X_km,  Y_km,  lab_km,  "K-means (k=25)")
     plot_one(axes[0, 1], X_hc,  Y_hc,  lab_hc,  "HC divisional (max_size=5000)")
-    plot_one(axes[1, 0], X_db1, Y_db1, lab_db1, "DBSCAN v1 (eps=100, minPts=50)")
+    plot_one(axes[1, 0], X_db1, Y_db1, lab_db1, "DBSCAN v1 (eps=100, minPts=100)")
     plot_one(axes[1, 1], X_db2, Y_db2, lab_db2, "DBSCAN v2 (split)")
 
     plt.tight_layout()

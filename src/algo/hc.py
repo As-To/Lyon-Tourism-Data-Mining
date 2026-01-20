@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 
 def divisional_clustering(df, max_size=5000, random_state=42):
     """
+    Clustering hiérarchique divisional.
+    Sépare récursivement les clusters trop grands avec K-Means (k=2).
+
     df : DataFrame avec colonnes ['X', 'Y']
     max_size : taille max autorisée par cluster
     retourne : DataFrame avec colonne 'cluster'
