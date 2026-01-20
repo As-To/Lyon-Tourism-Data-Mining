@@ -96,7 +96,7 @@ EXTRA_STOPWORDS = {
     "streetart", 
 
     #artefact de plateforme
-    "foursquare", "venue", "foursquare venue", "xproii", "proii", "vscocam", "vsco"
+    "foursquare", "venue", "foursquare venue", "xproii", "proii", "vscocam", "vsco", "rhone", "rhonealpes", "moto", "bb", "sncf"
 
 }
 
@@ -177,6 +177,7 @@ def top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=None, us
     # TfidVectorizer tokenize les "documents", c'est à dire chaque image
     vectorizer = TfidfVectorizer(
         stop_words=stopwords,
+        strip_accents="unicode",
         min_df=3,
         max_df=0.85,
         ngram_range=(1, 2)
