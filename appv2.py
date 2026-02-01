@@ -4,6 +4,7 @@ import folium
 from streamlit_folium import st_folium
 import numpy as np
 from pyproj import Transformer
+from src.algo.text_mining import top_terms_by_cluster, DEFAULT_STOPWORDS
 
 # Importation de tes algos (Assure-toi que les fichiers sont dans src/algo/)
 # Note: J'adapte les imports pour qu'ils utilisent les fonctions que tu m'as montrées
@@ -51,31 +52,62 @@ def get_color(cluster_id):
               'lightred', 'beige', 'darkblue', 'darkgreen', 'cadetblue', 'pink']
     return colors[int(cluster_id) % len(colors)]
 
+def get_cluster_label(cluster_id, topics_dict,nb_words=1):
+    """Récupère le mot le plus fréquent ou renvoie 'Zone X' par défaut"""
+    if cluster_id in topics_dict and topics_dict[cluster_id]:
+        # On prend le premier mot (le plus discriminant) et on le met en majuscules
+        label = ""
+        for word in topics_dict[cluster_id][:nb_words]:
+            label += word + ","
+        return label[:-1].capitalize()
+    return f"Zone {cluster_id}"
+
 # --- 3. INTERFACE ---
-st.title("📍 Comparaison des Algorithmes de Clustering à Lyon")
+st.title(" Comparaison des Algorithmes de Clustering à Lyon")
 
 tab1, tab2, tab3 = st.tabs(["K-Means", "DBSCAN (Avancé)", "Hiérarchique (Divisif)"])
 
 # === ONGLET 1 : K-MEANS ===
+# === ONGLET 1 : K-MEANS ===
 with tab1:
     st.header("K-Means Standard")
-    k_val = st.slider("Nombre de clusters (k)", 2, 50, 25, key="km_slider")
     
-    # On utilise ta fonction run_kmeans de K_means.py
-    # Attention: ta fonction attend 'points', 'k', 'df'
-    # On travaille sur une copie pour ne pas casser le df global
+    col1, col2 = st.columns(2)
+    # Slider pour le nombre de clusters (K)
+    k_val = col1.slider("Nombre de zones (k)", 50, 300, 200, key="km_slider")
+    
+    # Slider pour le nombre de mots dans l'étiquette
+    nb_desc = col2.slider("Mots par étiquette", 1, 5, 3, key="nb_words_km")
+    
+    # 1. Calcul K-Means
     df_km = df_global.copy()
     df_km = run_kmeans(points_global, k_val, df_km)
+
+    # 2. Text Mining
+    # On récupère toujours 10 mots pour avoir de la marge
+    with st.spinner("Analyse des descriptions..."):
+        topics_km = top_terms_by_cluster(
+            df_km, 
+            cluster_col="cluster", 
+            top_k=10,  # On en prend 10, le slider décidera combien en afficher
+            stopwords=DEFAULT_STOPWORDS, 
+            use_lemmas=True
+        )
     
-    # Carte
+    # 3. Carte
     m = folium.Map(location=[45.75, 4.85], zoom_start=12)
-    subset = df_km.head(2000) # Limite pour fluidité
+    subset = df_km.head(2000) 
     
     for _, row in subset.iterrows():
+        # Utilisation dynamique du slider 'nb_desc'
+        cluster_label = get_cluster_label(row['cluster'], topics_km, nb_words=nb_desc)
+        
         folium.CircleMarker(
             [row['lat'], row['long']], radius=3, color=get_color(row['cluster']),
-            fill=True, fill_opacity=0.7, popup=str(row.get('title', ''))
+            fill=True, fill_opacity=0.7, 
+            popup=f"<b>{cluster_label}</b><br>(Cluster {int(row['cluster'])})"
         ).add_to(m)
+        
     st_folium(m, width=700, height=500, key="map_km")
 
 # === ONGLET 2 : DBSCAN v2 ===
@@ -111,7 +143,7 @@ with tab2:
                 color=get_color(row['cluster']), fill=True
             ).add_to(m2)
         
-        # L'identifiant 'key' doit être fixe pour éviter la disparition
+        
         st_folium(m2, width=700, height=500, key="map_dbscan_stable")
 
 # === ONGLET 3 : HIERARCHIQUE ===
@@ -119,15 +151,18 @@ with tab3:
     st.header("Clustering Hiérarchique Divisif")
     max_size = st.slider("Taille max par zone", 1000, 10000, 5000, step=500, key="hc_slider")
     
+    if 'hc_result' not in st.session_state:
+        st.session_state.hc_result = None
+
     if st.button("Lancer HC", key="run_hc"):
          with st.spinner("Calcul en cours..."):
-            
             df_hc = df_global.copy()
-            df_db = divisional_clustering(df_hc, max_size=max_size)
-            st.session_state.db_result = df_db
+            
+            st.session_state.hc_result = divisional_clustering(df_hc, max_size=max_size)
 
-    if st.session_state.db_result is not None:
-        df_hc = st.session_state.db_result
+    
+    if st.session_state.hc_result is not None:
+        df_display = st.session_state.hc_result
             
         m3 = folium.Map(location=[45.75, 4.85], zoom_start=12)
         subset3 = df_hc.head(2000)
@@ -136,4 +171,5 @@ with tab3:
                 [row['lat'], row['long']], radius=3, color=get_color(row['cluster']),
                 fill=True, fill_opacity=0.7
                 ).add_to(m3)
+        
         st_folium(m3, width=700, height=500, key="map_hc")
