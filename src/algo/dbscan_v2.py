@@ -6,6 +6,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 from sklearn.cluster import DBSCAN, KMeans
 import matplotlib.pyplot as plt
 from src.algo.text_mining import top_terms_by_cluster, DEFAULT_STOPWORDS
+from src.algo.text_mining import top_terms_by_cluster, apriori_by_cluster, DEFAULT_STOPWORDS
+
 
 def compute_dbscan_with_kmeans_split(df, eps=100, min_samples=80, max_cluster_size=5000):
     """
@@ -119,3 +121,20 @@ topics = top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=DEF
 print("Mots représentatifs par cluster :")
 for cl, terms in topics.items():
     print(f"Cluster {cl}: {', '.join(terms)}")
+
+# Test de l'algo Apriori par cluster
+print("\n=== Test Algo Apriori ===")
+itemsets, rules = apriori_by_cluster(df, cluster_col="cluster", min_support=0.05,
+                                        max_k=3, min_confidence=0.4, min_lift=1.0,
+                                        top_n_itemsets=5, top_n_rules=5,
+                                        stopwords=DEFAULT_STOPWORDS)
+print("\nItemsets fréquents par cluster (Apriori):")
+for cl, itemsets_list in itemsets.items():
+    print(f"Cluster {cl}: {itemsets_list}")
+
+print("\nRègles d'association par cluster (Apriori):")
+for cl, rules_list in rules.items():
+    if rules_list:
+        print(f"Cluster {cl}:")
+        for rule in rules_list:
+            print(f"  {rule['antecedent']} -> {rule['consequent']} (conf: {rule['confidence']:.2f}, lift: {rule['lift']:.2f})")
