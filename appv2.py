@@ -374,7 +374,8 @@ with tab4:
         m4 = folium.Map(location=[45.75, 4.85], zoom_start=12)
         
         
-        subset4 = st.session_state.db2_data.sample(n=min(2000, len(st.session_state.db2_data)), random_state=42)
+        df_db2_no_noise = st.session_state.db2_data[st.session_state.db2_data["cluster"] != -1]
+        subset4 = df_db2_no_noise.sample(n=min(2000, len(df_db2_no_noise)), random_state=42)
         
         for _, row in subset4.iterrows():
             label = get_cluster_label(row['cluster'], st.session_state.db2_topics, nb_words=nb_desc_db2)
