@@ -8,7 +8,7 @@ from pyproj import Transformer
 from mistralai import Mistral
 
 # --- IMPORTS DE TES ALGOS ---
-# Assure-toi que les fichiers sont bien dans src/algo/
+
 from src.algo.text_mining import top_terms_by_cluster, apriori_by_cluster, DEFAULT_STOPWORDS
 from src.algo.K_means import run_kmeans 
 from src.algo.dbscan_v2 import compute_dbscan_with_kmeans_split
@@ -67,7 +67,7 @@ def cached_kmeans_execution(points, k, df_input):
 @st.cache_data
 def cached_dbscan_execution(df_input, eps, min_s):
     """Exécute DBSCAN et le Text Mining, mis en cache."""
-    # Clustering (Note: compute_dbscan_with_kmeans_split gère déjà la projection interne, on passe le DF)
+    
     df_res, _, _, _ = compute_dbscan_with_kmeans_split(
         df_input.copy(), eps=eps, min_samples=min_s
     )
@@ -126,7 +126,7 @@ def ask_llm_description(cluster_id, terms, rules):
     # Initialisation du client
     client = Mistral(api_key=api_key)
     
-    # Construction du prompt (identique à vos versions précédentes)
+    
     prompt = f"""
     Tu es un expert touristique de la ville de Lyon. 
     J'ai un cluster de photos géolocalisées. Voici les indices :
@@ -243,7 +243,7 @@ with tab1:
             [round(row['lat'],5), round(row['long'],5)], radius=5, color=get_color(row['cluster']),
             fill=True, fill_opacity=0.7,
             popup=f"<b>{label}</b><br>Cluster {int(row['cluster'])}"
-        ).add_to(m) # Ajout au cluster, pas à la carte directement
+        ).add_to(m) 
         
     st_folium(m, width=700, height=500, key="map_km")
     
@@ -264,7 +264,6 @@ with tab2:
     
     if st.button("Lancer DBSCAN", key="run_db"):
         with st.spinner("Calcul DBSCAN..."):
-            # Appel caché
             df_res, topics_res = cached_dbscan_execution(df_global, eps, min_s)
             st.session_state.db_data = df_res
             st.session_state.db_topics = topics_res
