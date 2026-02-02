@@ -124,10 +124,14 @@ for cl, terms in topics.items():
 
 # Test de l'algo Apriori par cluster
 print("\n=== Test Algo Apriori ===")
-itemsets, rules = apriori_by_cluster(df, cluster_col="cluster", min_support=0.05,
-                                        max_k=3, min_confidence=0.4, min_lift=1.0,
-                                        top_n_itemsets=5, top_n_rules=5,
-                                        stopwords=DEFAULT_STOPWORDS)
+itemsets, rules = apriori_by_cluster(
+    df,
+    cluster_col="cluster",
+    min_support=0.05,
+    max_k=3,
+    min_confidence=0.4,
+    stopwords=DEFAULT_STOPWORDS,
+)
 print("\nItemsets fréquents par cluster (Apriori):")
 for cl, itemsets_list in itemsets.items():
     print(f"Cluster {cl}: {itemsets_list}")
