@@ -14,6 +14,7 @@ from src.algo.K_means import run_kmeans
 from src.algo.dbscan_v2 import compute_dbscan_with_kmeans_split
 from src.algo.dbscan_v3 import compute_dbscan_with_dbscan_in_big_clusters
 from src.algo.hc import divisional_clustering, agglomerative_clustering_algo
+from src.algo.temporal_analysis import temporal_dbscan_analysis
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Lyon Clustering", layout="wide")
@@ -100,6 +101,12 @@ def cached_hc_agglomerative(df_input, n_clusters, sample_size):
         stopwords=DEFAULT_STOPWORDS, use_lemmas=True
     )
     return df_res, topics
+
+@st.cache_data
+def cached_temporal_execution(df_input):
+    """Exécute l'analyse temporelle DBSCAN, mise en cache."""
+    clustered_df, stats_df = temporal_dbscan_analysis(df_input.copy())
+    return clustered_df, stats_df
 
 # --- 3. FONCTIONS UTILITAIRES ---
 
@@ -216,7 +223,7 @@ def show_cluster_analysis(df_clustered,algo_type):
 # --- 4. INTERFACE PRINCIPALE ---
 st.title("📍 Comparaison des Algorithmes de Clustering à Lyon")
 
-tab1, tab2, tab3, tab4 = st.tabs(["K-Means", "DBSCAN + K_means", "Hiérarchique","DBSCAN x2"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["K-Means", "DBSCAN + K_means", "Hiérarchique","DBSCAN x2", "Temporel"])
 
 # === ONGLET 1 : K-MEANS ===
 with tab1:
@@ -379,3 +386,70 @@ with tab4:
         
         st_folium(m4, width=700, height=500, key="map_db_stable_2")
         show_cluster_analysis(st.session_state.db2_data,"DBSCAN_2")
+
+# === ONGLET 5 : TEMPOREL ===
+with tab5:
+    st.header("Temporel - Groupes d'années + trimestres globaux")
+
+    if "tmp_data" not in st.session_state:
+        st.session_state.tmp_data = None
+
+    if st.button("Lancer analyse temporelle", key="run_tmp"):
+        with st.spinner("Calcul temporel..."):
+            clustered_df, _ = cached_temporal_execution(df_global)
+            st.session_state.tmp_data = clustered_df
+
+    if st.session_state.tmp_data is not None:
+        df_tmp = st.session_state.tmp_data
+
+        # 1) Groupes d'années (sans bruit)
+        groups = ["2008_2011", "2012_2015", "2016_2019"]
+        cols = st.columns(3)
+        for i, group_label in enumerate(groups):
+            with cols[i]:
+                m5 = folium.Map(location=[45.75, 4.85], zoom_start=12)
+                subset = df_tmp[
+                    (df_tmp["analysis_level"] == "year_group")
+                    & (df_tmp["period"] == group_label)
+                    & (df_tmp["cluster_local"] != -1)
+                ]
+                if not subset.empty:
+                    subset = subset.sample(n=min(1500, len(subset)), random_state=42)
+                    for _, row in subset.iterrows():
+                        folium.CircleMarker(
+                            [round(row["lat"], 5), round(row["long"], 5)],
+                            radius=4,
+                            color=get_color(row["cluster_local"]),
+                            fill=True,
+                            fill_opacity=0.7,
+                        ).add_to(m5)
+
+                st.markdown(f"**{group_label.replace('_', ' -> ')}**")
+                st_folium(m5, width=350, height=300, key=f"map_tmp_group_{group_label}")
+
+        # 2) Trimestres globaux (toutes années, sans bruit)
+        q_defs = ["Q1_JAN_MAR", "Q2_APR_JUN", "Q3_JUL_SEP", "Q4_OCT_DEC"]
+        q_names = ["Q1 (Jan-Mar)", "Q2 (Avr-Juin)", "Q3 (Juil-Sep)", "Q4 (Oct-Dec)"]
+
+        c1, c2 = st.columns(2)
+        for i, (q_code, q_name) in enumerate(zip(q_defs, q_names)):
+            with (c1 if i % 2 == 0 else c2):
+                m6 = folium.Map(location=[45.75, 4.85], zoom_start=12)
+                subset = df_tmp[
+                    (df_tmp["analysis_level"] == "quarter_global")
+                    & (df_tmp["period"] == q_code)
+                    & (df_tmp["cluster_local"] != -1)
+                ]
+                if not subset.empty:
+                    subset = subset.sample(n=min(1500, len(subset)), random_state=42)
+                    for _, row in subset.iterrows():
+                        folium.CircleMarker(
+                            [round(row["lat"], 5), round(row["long"], 5)],
+                            radius=4,
+                            color=get_color(row["cluster_local"]),
+                            fill=True,
+                            fill_opacity=0.7,
+                        ).add_to(m6)
+
+                st.markdown(f"**{q_name} - toutes années**")
+                st_folium(m6, width=500, height=320, key=f"map_tmp_quarter_{q_code}")
