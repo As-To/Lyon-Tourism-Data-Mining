@@ -5,7 +5,7 @@ from folium.plugins import MarkerCluster
 from streamlit_folium import st_folium
 import numpy as np
 from pyproj import Transformer
-import ollama
+from mistralai import Mistral
 
 # --- IMPORTS DE TES ALGOS ---
 # Assure-toi que les fichiers sont bien dans src/algo/
@@ -115,24 +115,41 @@ def get_cluster_label(cluster_id, topics_dict, nb_words=1):
     return f"Zone {cluster_id}"
 
 def ask_llm_description(cluster_id, terms, rules):
-    """Interroge Ollama pour une description touristique."""
+    api_key = st.secrets.get("MISTRAL_API_KEY")
+    if not api_key: 
+        return "⚠️ Clé Mistral manquante dans .streamlit/secrets.toml"
+    
+    # Initialisation du client
+    client = Mistral(api_key=api_key)
+    
+    # Construction du prompt (identique à vos versions précédentes)
     prompt = f"""
     Tu es un expert touristique de la ville de Lyon. 
     J'ai un cluster de photos géolocalisées. Voici les indices :
-    1. MOTS-CLÉS : {', '.join(terms[:10])}
-    2. RÈGLES D'ASSOCIATION : {chr(10).join(rules[:5]) if rules else "Aucune"}
     
-    Tâche : Devine le lieu et donne une description courte (1 phrase) et un titre.
-    Format : 
-    Titre : [Nom]
-    Description : [Texte]
+    1. MOTS-CLÉS (TF-IDF) : {', '.join(terms[:10])}
+    
+    2. RÈGLES D'ASSOCIATION (Apriori) :
+    {chr(10).join(rules[:5]) if rules else "Aucune règle forte détectée."}
+    
+    Tâche :
+    Devine de quel lieu il s'agit, donne un titre et une description courte.
     """
+
     try:
-        # Modifie 'llama3' si tu as un autre modèle (ex: 'mistral')
-        response = ollama.chat(model='llama3', messages=[{'role': 'user', 'content': prompt}])
-        return response['message']['content']
+        
+        response = client.chat.complete(
+            model="mistral-large-latest",
+            messages=[
+                {
+                    "role": "user", 
+                    "content": prompt
+                }
+            ]
+        )
+        return response.choices[0].message.content
     except Exception as e:
-        return f"⚠️ Erreur Ollama : {e}. Vérifie que l'app est lancée."
+        return f"⚠️ Erreur API Mistral : {e}"
 
 def show_cluster_analysis(df_clustered,algo_type):
     """Affiche le panneau d'analyse détaillée en bas de page."""
