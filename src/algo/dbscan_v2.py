@@ -64,77 +64,77 @@ def compute_dbscan_with_kmeans_split(df, eps=100, min_samples=80, max_cluster_si
         df_out['cluster'] = labels
 
     return df_out, X, Y, labels
+if __name__ == "__main__":
+    # Trouve le chemin du dossier actuel du script
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Construit le chemin vers le fichier CSV
+    file_path = os.path.join(current_dir, "../../data/cleaned/cleaned_lyon_data.csv")
 
-# Trouve le chemin du dossier actuel du script
-current_dir = os.path.dirname(os.path.abspath(__file__))
-# Construit le chemin vers le fichier CSV
-file_path = os.path.join(current_dir, "../../data/cleaned/cleaned_lyon_data.csv")
+    df = pd.read_csv(file_path)
 
-df = pd.read_csv(file_path)
-
-# Appel de la fonction (calcule X, Y, labels + ajoute cluster)
-df, X, Y, labels = compute_dbscan_with_kmeans_split(df, eps=100, min_samples=100, max_cluster_size=5000) 
-
-
-#5EME ETAPE : AFFICHAGE DES RESULTATS
-n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
-noise_ratio = (labels == -1).mean()
-
-print(f"Nombre de clusters : {n_clusters}")
-print(f"Proportion de bruit : {noise_ratio:.2%}")
-
-#Nombre de points par cluster
-unique, counts = np.unique(labels, return_counts=True)
-print("Nombre de points par cluster (label : nombre de points) :")
-for label, count in zip(unique, counts):
-    print(f"{label} : {count}")
+    # Appel de la fonction (calcule X, Y, labels + ajoute cluster)
+    df, X, Y, labels = compute_dbscan_with_kmeans_split(df, eps=100, min_samples=100, max_cluster_size=5000) 
 
 
-#5EME ETAPE : VISUALISATION DES CLUSTERS
-# Paramètre d'affichage
-SHOW_NOISE = False  # True = afficher le bruit, False = le masquer
+    #5EME ETAPE : AFFICHAGE DES RESULTATS
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    noise_ratio = (labels == -1).mean()
 
-# Masque des points à afficher
-mask = np.ones_like(labels, dtype=bool) if SHOW_NOISE else (labels != -1)
+    print(f"Nombre de clusters : {n_clusters}")
+    print(f"Proportion de bruit : {noise_ratio:.2%}")
+
+    #Nombre de points par cluster
+    unique, counts = np.unique(labels, return_counts=True)
+    print("Nombre de points par cluster (label : nombre de points) :")
+    for label, count in zip(unique, counts):
+        print(f"{label} : {count}")
 
 
-xmin, xmax = np.percentile(X, [5, 95])
-ymin, ymax = np.percentile(Y, [5, 80])
+    #5EME ETAPE : VISUALISATION DES CLUSTERS
+    # Paramètre d'affichage
+    SHOW_NOISE = False  # True = afficher le bruit, False = le masquer
 
-plt.figure(figsize=(6, 6))
-plt.scatter(X[mask], Y[mask], c=labels[mask], s=5, cmap='tab20')
+    # Masque des points à afficher
+    mask = np.ones_like(labels, dtype=bool) if SHOW_NOISE else (labels != -1)
 
-#plt.xlim(xmin, xmax)
-#plt.ylim(ymin, ymax)
 
-plt.title("DBSCAN – zone centrale")
-plt.xlabel("X (m)")
-plt.ylabel("Y (m)")
-plt.show()    
+    xmin, xmax = np.percentile(X, [5, 95])
+    ymin, ymax = np.percentile(Y, [5, 80])
 
-# Analyse des mots les plus fréquents par cluster via text_mining
+    plt.figure(figsize=(6, 6))
+    plt.scatter(X[mask], Y[mask], c=labels[mask], s=5, cmap='tab20')
 
-print(f"Nombre de clusters : {n_clusters}")
-print(f"Proportion de bruit : {noise_ratio:.2%}")
+    #plt.xlim(xmin, xmax)
+    #plt.ylim(ymin, ymax)
 
-topics = top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=DEFAULT_STOPWORDS, use_lemmas=True)
-print("Mots représentatifs par cluster :")
-for cl, terms in topics.items():
-    print(f"Cluster {cl}: {', '.join(terms)}")
+    plt.title("DBSCAN – zone centrale")
+    plt.xlabel("X (m)")
+    plt.ylabel("Y (m)")
+    plt.show()    
 
-# Test de l'algo Apriori par cluster
-print("\n=== Test Algo Apriori ===")
-itemsets, rules = apriori_by_cluster(df, cluster_col="cluster", min_support=0.05,
-                                        max_k=3, min_confidence=0.4, min_lift=1.0,
-                                        top_n_itemsets=5, top_n_rules=5,
-                                        stopwords=DEFAULT_STOPWORDS)
-print("\nItemsets fréquents par cluster (Apriori):")
-for cl, itemsets_list in itemsets.items():
-    print(f"Cluster {cl}: {itemsets_list}")
+    # Analyse des mots les plus fréquents par cluster via text_mining
 
-print("\nRègles d'association par cluster (Apriori):")
-for cl, rules_list in rules.items():
-    if rules_list:
-        print(f"Cluster {cl}:")
-        for rule in rules_list:
-            print(f"  {rule['antecedent']} -> {rule['consequent']} (conf: {rule['confidence']:.2f}, lift: {rule['lift']:.2f})")
+    print(f"Nombre de clusters : {n_clusters}")
+    print(f"Proportion de bruit : {noise_ratio:.2%}")
+
+    topics = top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=DEFAULT_STOPWORDS, use_lemmas=True)
+    print("Mots représentatifs par cluster :")
+    for cl, terms in topics.items():
+        print(f"Cluster {cl}: {', '.join(terms)}")
+
+    # Test de l'algo Apriori par cluster
+    print("\n=== Test Algo Apriori ===")
+    itemsets, rules = apriori_by_cluster(df, cluster_col="cluster", min_support=0.05,
+                                            max_k=3, min_confidence=0.4, min_lift=1.0,
+                                            top_n_itemsets=5, top_n_rules=5,
+                                            stopwords=DEFAULT_STOPWORDS)
+    print("\nItemsets fréquents par cluster (Apriori):")
+    for cl, itemsets_list in itemsets.items():
+        print(f"Cluster {cl}: {itemsets_list}")
+
+    print("\nRègles d'association par cluster (Apriori):")
+    for cl, rules_list in rules.items():
+        if rules_list:
+            print(f"Cluster {cl}:")
+            for rule in rules_list:
+                print(f"  {rule['antecedent']} -> {rule['consequent']} (conf: {rule['confidence']:.2f}, lift: {rule['lift']:.2f})")

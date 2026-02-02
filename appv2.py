@@ -12,6 +12,7 @@ from mistralai import Mistral
 from src.algo.text_mining import top_terms_by_cluster, apriori_by_cluster, DEFAULT_STOPWORDS
 from src.algo.K_means import run_kmeans 
 from src.algo.dbscan_v2 import compute_dbscan_with_kmeans_split
+from src.algo.dbscan_v3 import compute_dbscan_with_dbscan_in_big_clusters
 from src.algo.hc import divisional_clustering, agglomerative_clustering_algo
 
 # --- CONFIGURATION ---
@@ -215,7 +216,7 @@ def show_cluster_analysis(df_clustered,algo_type):
 # --- 4. INTERFACE PRINCIPALE ---
 st.title("📍 Comparaison des Algorithmes de Clustering à Lyon")
 
-tab1, tab2, tab3 = st.tabs(["K-Means", "DBSCAN (Avancé)", "Hiérarchique"])
+tab1, tab2, tab3, tab4 = st.tabs(["K-Means", "DBSCAN + K_means", "Hiérarchique","DBSCAN x2"])
 
 # === ONGLET 1 : K-MEANS ===
 with tab1:
@@ -331,3 +332,51 @@ with tab3:
             
         st_folium(m3, width=700, height=500, key="map_hc_stable")
         show_cluster_analysis(st.session_state.hc_data,"HC")
+
+with tab4:
+    st.header("DBSCAN x2")
+    
+    if 'db2_data' not in st.session_state:
+        st.session_state.db2_data = None
+        st.session_state.db2_topics = None
+
+    c1, c2 = st.columns(2)
+    eps1 = c1.slider("Premier Rayon (mètres)", 20, 300, 100, key="db2_eps1")
+    min_s1 = c2.slider("Premier Min Points", 5, 100, 50, key="db2_min1")
+    eps2 = c1.slider("Second Rayon (mètres)", 10, 100, 50, key="db2_eps2")
+    min_s2 = c2.slider("Second Min Points", 5, 100, 25, key="db2_min2")
+    max_cl_size = st.slider("Taille max d'un gros cluster", 1000, 10000, 5000, step=500)
+    
+    if st.button("Lancer DBSCAN x2", key="run_db2"):
+        with st.spinner("Calcul DBSCAN x2..."):
+            # Appel caché
+            df_res, _, _, _ = compute_dbscan_with_dbscan_in_big_clusters(
+                df_global.copy(), eps=eps1, min_samples=min_s1,
+                eps2=eps2, min_samples2=min_s2,
+                max_cluster_size=max_cl_size
+            )
+            topics_res = top_terms_by_cluster(
+                df_res, cluster_col="cluster", top_k=10, 
+                stopwords=DEFAULT_STOPWORDS, use_lemmas=True
+            )
+            st.session_state.db2_data = df_res
+            st.session_state.db2_topics = topics_res
+
+    if st.session_state.db2_data is not None:
+        nb_desc_db2 = st.slider("Mots par étiquette", 1, 5, 2, key="db2_words_slider")
+        
+        m4 = folium.Map(location=[45.75, 4.85], zoom_start=12)
+        
+        
+        subset4 = st.session_state.db2_data.sample(n=min(2000, len(st.session_state.db2_data)), random_state=42)
+        
+        for _, row in subset4.iterrows():
+            label = get_cluster_label(row['cluster'], st.session_state.db2_topics, nb_words=nb_desc_db2)
+            folium.CircleMarker(
+                [round(row['lat'],5), round(row['long'],5)], radius=5, color=get_color(row['cluster']),
+                fill=True, fill_opacity=0.7,
+                popup=f"<b>{label}</b><br>Cluster {int(row['cluster'])}"
+            ).add_to(m4)
+        
+        st_folium(m4, width=700, height=500, key="map_db_stable_2")
+        show_cluster_analysis(st.session_state.db2_data,"DBSCAN_2")
