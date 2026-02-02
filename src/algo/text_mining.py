@@ -127,6 +127,11 @@ def top_terms_by_cluster(df, cluster_col="cluster", top_k=10, stopwords=None, us
     if use_lemmas:
         texts = texts.map(lemmatize_optional)
 
+    if 'clean_text' in df.columns:
+        texts = df['clean_text']
+    else:
+        texts = build_text(df).map(basic_preprocess)
+
     # crée la matrice TF-IDF
     # la matrice est de taille (n_samples, n_terms)
     # TfidVectorizer tokenize les "documents", c'est à dire chaque image

@@ -18,25 +18,28 @@ from src.algo.hc import divisional_clustering, agglomerative_clustering_algo
 st.set_page_config(page_title="Lyon Clustering", layout="wide")
 
 # --- 1. CHARGEMENT ET PROJECTION (Cache global) ---
+
 @st.cache_data
 def load_and_prep_data():
-    # Chargement
-    df = pd.read_csv("data/cleaned/cleaned_lyon_data.csv") 
-    
-    # Nettoyage
+    df = pd.read_csv("data/cleaned/cleaned_lyon_data.csv")
     df = df.dropna(subset=['lat', 'long'])
     
-    # Projection (WGS84 -> Lambert-93)
+    # 1. Projection (une seule fois)
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:2154", always_xy=True)
     X, Y = transformer.transform(df['long'].values, df['lat'].values)
+    df['X'], df['Y'] = X, Y
     
-    df['X'] = X
-    df['Y'] = Y
+    # 2. PRÉ-TRAITEMENT TEXTUEL 
+    # On crée une colonne 'clean_text' déjà prête pour le clustering
+    # On fait le build_text et basic_preprocess ICI, une seule fois pour toute la session
+    from src.algo.text_mining import build_text, basic_preprocess
+    df['clean_text'] = build_text(df).map(basic_preprocess)
     
-    # Tableau numpy pour Scikit-Learn
-    points = np.column_stack((X, Y))
+    # 3. Optimisation mémoire : Convertir en float32 (prend 2x moins de place)
+    df['X'] = df['X'].astype('float32')
+    df['Y'] = df['Y'].astype('float32')
     
-    return df, points
+    return df, np.column_stack((df['X'], df['Y']))
 
 try:
     df_global, points_global = load_and_prep_data()
@@ -151,6 +154,7 @@ def ask_llm_description(cluster_id, terms, rules):
     except Exception as e:
         return f"⚠️ Erreur API Mistral : {e}"
 
+@st.fragment # Empêche la carte de se recharger quand on analyse un cluster
 def show_cluster_analysis(df_clustered,algo_type):
     """Affiche le panneau d'analyse détaillée en bas de page."""
     st.markdown("---")
@@ -174,7 +178,7 @@ def show_cluster_analysis(df_clustered,algo_type):
         
         # --- PARTIE 1 : TEXT MINING ---
         with col1:
-            st.markdown("### 📊 Données Textuelles")
+            st.markdown("### Données Textuelles")
             
             # Recalcul ou récupération rapide pour l'affichage détaillé
             # (On ne met pas ça en cache global car c'est interactif et rapide sur un seul cluster)
@@ -227,7 +231,6 @@ with tab1:
     
     # CARTE OPTIMISÉE (MarkerCluster)
     m = folium.Map(location=[45.75, 4.85], zoom_start=12)
-    marker_cluster = MarkerCluster().add_to(m)
     
     # On limite l'affichage à 2000 points pour éviter le lag navigateur, 
     # mais le clustering est fait sur tout le dataset.
@@ -236,10 +239,10 @@ with tab1:
     for _, row in subset.iterrows():
         label = get_cluster_label(row['cluster'], topics_km, nb_words=nb_desc)
         folium.CircleMarker(
-            [row['lat'], row['long']], radius=5, color=get_color(row['cluster']),
+            [round(row['lat'],5), round(row['long'],5)], radius=5, color=get_color(row['cluster']),
             fill=True, fill_opacity=0.7,
             popup=f"<b>{label}</b><br>Cluster {int(row['cluster'])}"
-        ).add_to(marker_cluster) # Ajout au cluster, pas à la carte directement
+        ).add_to(m) # Ajout au cluster, pas à la carte directement
         
     st_folium(m, width=700, height=500, key="map_km")
     
@@ -269,17 +272,17 @@ with tab2:
         nb_desc_db = st.slider("Mots par étiquette", 1, 5, 2, key="db_words_slider")
         
         m2 = folium.Map(location=[45.75, 4.85], zoom_start=12)
-        marker_cluster2 = MarkerCluster().add_to(m2)
+        
         
         subset2 = st.session_state.db_data.sample(n=min(2000, len(st.session_state.db_data)), random_state=42)
         
         for _, row in subset2.iterrows():
             label = get_cluster_label(row['cluster'], st.session_state.db_topics, nb_words=nb_desc_db)
             folium.CircleMarker(
-                [row['lat'], row['long']], radius=5, color=get_color(row['cluster']),
+                [round(row['lat'],5), round(row['long'],5)], radius=5, color=get_color(row['cluster']),
                 fill=True, fill_opacity=0.7,
                 popup=f"<b>{label}</b><br>Cluster {int(row['cluster'])}"
-            ).add_to(marker_cluster2)
+            ).add_to(m2)
             
         st_folium(m2, width=700, height=500, key="map_db_stable")
         show_cluster_analysis(st.session_state.db_data,"DBSCAN")
@@ -314,17 +317,17 @@ with tab3:
         nb_desc_hc = st.slider("Mots par étiquette", 1, 5, 2, key="hc_words_slider")
         
         m3 = folium.Map(location=[45.75, 4.85], zoom_start=12)
-        marker_cluster3 = MarkerCluster().add_to(m3)
+        
         
         subset3 = st.session_state.hc_data.sample(n=min(2000, len(st.session_state.hc_data)), random_state=42)
         
         for _, row in subset3.iterrows():
             label = get_cluster_label(row['cluster'], st.session_state.hc_topics, nb_words=nb_desc_hc)
             folium.CircleMarker(
-                [row['lat'], row['long']], radius=5, color=get_color(row['cluster']),
+                [round(row['lat'],5), round(row['long'],5)], radius=5, color=get_color(row['cluster']),
                 fill=True, fill_opacity=0.7,
                 popup=f"<b>{label}</b>"
-            ).add_to(marker_cluster3)
+            ).add_to(m3)
             
         st_folium(m3, width=700, height=500, key="map_hc_stable")
         show_cluster_analysis(st.session_state.hc_data,"HC")
