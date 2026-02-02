@@ -2,8 +2,48 @@ import pandas as pd
 import os
 from pyproj import Transformer
 import numpy as np
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, AgglomerativeClustering
 import matplotlib.pyplot as plt
+
+
+def agglomerative_clustering_algo(df, n_clusters=20, sample_size=5000):
+    """
+    Clustering Agglomératif (Bottom-Up).
+    """
+    # 1. Échantillonnage de sécurité
+    if len(df) > sample_size:
+        print(f" Dataset trop gros pour Agglomerative ({len(df)} pts). Échantillonnage à {sample_size} pts.")
+        # On prend un échantillon aléatoire
+        df_work = df.sample(n=sample_size, random_state=42).copy()
+    else:
+        df_work = df.copy()
+
+    # 2. Préparation des points (X, Y doivent déjà être dans le DF)
+    points = df_work[['X', 'Y']].values
+
+    # 3. Exécution de l'algorithme Agglomerative (Ward = minimise la variance, comme K-Means)
+    model = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward')
+    labels = model.fit_predict(points)
+
+    df_work['cluster'] = labels
+    
+    return df_work
+
+def compute_agglomerative_wrapper(df, n_clusters=50, sample_size=5000):
+    # Étape 1 : Nettoyage & Projection (copié de compute_hc_clustering)
+    df_out = df[['lat', 'long', 'tags', 'title']].dropna(subset=['lat', 'long']).copy()
+    
+    
+    if 'X' not in df_out.columns:
+        transformer = Transformer.from_crs("EPSG:4326", "EPSG:2154", always_xy=True)
+        X, Y = transformer.transform(df_out['long'].values, df_out['lat'].values)
+        df_out['X'] = X
+        df_out['Y'] = Y
+        
+    # Étape 2 : Algo Bottom-Up
+    df_result = agglomerative_clustering_algo(df_out, n_clusters=n_clusters, sample_size=sample_size)
+    
+    return df_result
 
 def divisional_clustering(df, max_size=5000, random_state=42):
     """
