@@ -7,7 +7,7 @@ from sklearn.cluster import DBSCAN, KMeans
 import matplotlib.pyplot as plt
 from src.algo.text_mining import top_terms_by_cluster, DEFAULT_STOPWORDS
 
-def compute_dbscan_with_kmeans_split(df, eps=100, min_samples=80, eps2=20, min_samples2=20,max_cluster_size=5000):
+def compute_dbscan_with_dbscan_in_big_clusters(df, eps=100, min_samples=80, eps2=20, min_samples2=20,max_cluster_size=5000):
     """
     Entrée : dataframe contenant au minimum 'lat' et 'long'
     Sortie : (df_out, X, Y, labels)
@@ -71,7 +71,7 @@ file_path = os.path.join(current_dir, "../../data/cleaned/cleaned_lyon_data.csv"
 df = pd.read_csv(file_path)
 
 # Appel de la fonction (calcule X, Y, labels + ajoute cluster)
-df, X, Y, labels = compute_dbscan_with_kmeans_split(df, eps=25, min_samples=25, eps2=15, min_samples2=25, max_cluster_size=5000) 
+df, X, Y, labels = compute_dbscan_with_dbscan_in_big_clusters(df, eps=25, min_samples=25, eps2=15, min_samples2=25, max_cluster_size=5000) 
 
 
 #5EME ETAPE : AFFICHAGE DES RESULTATS
